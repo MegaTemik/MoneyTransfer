@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"sync"
 )
 
 type User struct {
@@ -30,23 +31,32 @@ type Transaction struct {
 }
 
 type PaymentSystem struct {
-	Users        map[string]*User
-	Transactions []Transaction
+	Users            map[string]*User
+	TransactionQueue []Transaction
+	mu               sync.Mutex
 }
 
 func NewPaymentSystem() *PaymentSystem {
 	return &PaymentSystem{
-		Users:        make(map[string]*User),
-		Transactions: make([]Transaction, 0),
+		Users:            make(map[string]*User),
+		TransactionQueue: make([]Transaction, 0),
 	}
 }
 
-func (ps *PaymentSystem) AddUser(Id string, user *User) {
-	ps.Users[Id] = user
+func (ps *PaymentSystem) AddUser(id string, name string, balance float64) {
+	ps.Users[id] = &User{
+		ID:      id,
+		Name:    name,
+		Balance: balance,
+	}
 }
 
-func (ps *PaymentSystem) AddTransaction(transaction Transaction) {
-	ps.Transactions = append(ps.Transactions, transaction)
+func (ps *PaymentSystem) AddTransaction(fromID, toID string, amount float64) {
+	ps.TransactionQueue = append(ps.TransactionQueue, Transaction{
+		FromID: fromID,
+		ToID:   toID,
+		Amount: amount,
+	})
 }
 
 func (ps *PaymentSystem) ProcessingTransactions(tr Transaction) error {
@@ -62,82 +72,58 @@ func (ps *PaymentSystem) ProcessingTransactions(tr Transaction) error {
 		return errors.New(err)
 	}
 
-	ps.Users[tr.FromID].WithDraw(tr.Amount)
+	ps.mu.Lock()
+	err := ps.Users[tr.FromID].WithDraw(tr.Amount)
+	if err != nil {
+		return err
+	}
 	ps.Users[tr.ToID].Deposit(tr.Amount)
+	ps.mu.Unlock()
 
 	return nil
 }
 
-func main() {
-	u1 := &User{
-		ID:      "111",
-		Name:    "Григорий",
-		Balance: 50000,
-	}
+func (ps *PaymentSystem) Worker(ch <-chan Transaction, wg *sync.WaitGroup) error {
+	defer wg.Done()
 
-	u2 := &User{
-		ID:      "222",
-		Name:    "Пётр",
-		Balance: 101010,
-	}
-
-	u3 := &User{
-		ID:      "333",
-		Name:    "Василий",
-		Balance: 15000,
-	}
-
-	u1.Deposit(100)
-	err := u1.WithDraw(60000000000)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	err = u2.WithDraw(1000)
-	if err != nil {
-		fmt.Println(err)
-	}
-	u2.Deposit(5000)
-
-	u3.Deposit(50)
-	err = u3.WithDraw(1)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	tr1 := Transaction{
-		FromID: u1.ID,
-		ToID:   u2.ID,
-		Amount: 10000,
-	}
-
-	tr2 := Transaction{
-		FromID: u3.ID,
-		ToID:   u2.ID,
-		Amount: 5000,
-	}
-
-	tr3 := Transaction{
-		FromID: u2.ID,
-		ToID:   u3.ID,
-		Amount: 100000,
-	}
-
-	ps := NewPaymentSystem()
-	ps.Transactions = append(ps.Transactions, tr1, tr2, tr3)
-
-	ps.Users[u1.ID] = u1
-	ps.Users[u2.ID] = u2
-	ps.Users[u3.ID] = u3
-
-	for _, v := range ps.Transactions {
+	for v := range ch {
 		err := ps.ProcessingTransactions(v)
 		if err != nil {
-			fmt.Println(err)
+			return err
 		}
 	}
+	return nil
 
-	fmt.Printf("Айди: %s, Имя: %s, Баланс: %.2f руб.\n", u1.ID, u1.Name, u1.Balance)
-	fmt.Printf("Айди: %s, Имя: %s, Баланс: %.2f руб.\n", u2.ID, u2.Name, u2.Balance)
-	fmt.Printf("Айди: %s, Имя: %s, Баланс: %.2f руб.\n", u3.ID, u3.Name, u3.Balance)
+}
+
+func main() {
+
+	ps := NewPaymentSystem()
+
+	ps.AddUser("111", "Григорий", 50000)
+	ps.AddUser("222", "Петр", 100000)
+	ps.AddUser("333", "Василий", 15000)
+
+	ps.AddTransaction("111", "222", 10000)
+	ps.AddTransaction("333", "222", 5000)
+	ps.AddTransaction("222", "333", 100000)
+
+	ch := make(chan Transaction, len(ps.TransactionQueue))
+
+	wg := sync.WaitGroup{}
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go ps.Worker(ch, &wg)
+	}
+
+	for _, v := range ps.TransactionQueue {
+		ch <- v
+	}
+	close(ch)
+
+	wg.Wait()
+
+	fmt.Printf("Айди: %s, Имя: %s, Баланс: %.2f руб.\n", ps.Users["111"].ID, ps.Users["111"].Name, ps.Users["111"].Balance)
+	fmt.Printf("Айди: %s, Имя: %s, Баланс: %.2f руб.\n", ps.Users["222"].ID, ps.Users["222"].Name, ps.Users["222"].Balance)
+	fmt.Printf("Айди: %s, Имя: %s, Баланс: %.2f руб.\n", ps.Users["333"].ID, ps.Users["333"].Name, ps.Users["333"].Balance)
 }
