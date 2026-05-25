@@ -108,6 +108,23 @@ func main() {
 	ps.AddTransaction("333", "222", 5000)
 	ps.AddTransaction("222", "333", 100000)
 
+	ps.Users["111"].Deposit(100)
+	ps.Users["222"].Deposit(500)
+	ps.Users["333"].Deposit(1000)
+
+	err := ps.Users["111"].WithDraw(100)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ps.Users["222"].WithDraw(100)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ps.Users["333"].WithDraw(100)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	ch := make(chan Transaction, len(ps.TransactionQueue))
 
 	wg := sync.WaitGroup{}
