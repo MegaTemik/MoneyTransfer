@@ -33,7 +33,6 @@ type Transaction struct {
 type PaymentSystem struct {
 	Users            map[string]*User
 	TransactionQueue []Transaction
-	mu               sync.Mutex
 }
 
 func NewPaymentSystem() *PaymentSystem {
@@ -72,13 +71,11 @@ func (ps *PaymentSystem) ProcessingTransactions(tr Transaction) error {
 		return errors.New(err)
 	}
 
-	ps.mu.Lock()
 	err := ps.Users[tr.FromID].WithDraw(tr.Amount)
 	if err != nil {
 		return err
 	}
 	ps.Users[tr.ToID].Deposit(tr.Amount)
-	ps.mu.Unlock()
 
 	return nil
 }
