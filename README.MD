@@ -22,3 +22,9 @@
 git clone https://github.com/MegaTemik/MoneyTransfer
 cd MoneyTransfer
 ```
+
+## Запуск
+
+```bash
+go run main.go
+```
