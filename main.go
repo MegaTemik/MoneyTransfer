@@ -11,8 +11,12 @@ type User struct {
 	Balance float64
 }
 
-func (u *User) Deposit(amount float64) {
+func (u *User) Deposit(amount float64) error {
+	if amount <= 1 {
+		return errors.New("the amount of deposit must be greater than 0!")
+	}
 	u.Balance += amount
+	return nil
 }
 
 func (u *User) WithDraw(amount float64) error {
@@ -20,7 +24,7 @@ func (u *User) WithDraw(amount float64) error {
 		u.Balance -= amount
 		return nil
 	}
-	return errors.New("not enough money on the user ID: " + u.ID)
+	return errors.New("not enough money to withdraw from the user ID: " + u.ID)
 }
 
 type Transaction struct {
@@ -88,11 +92,20 @@ func main() {
 	ps.AddTransaction("333", "222", 5000)
 	ps.AddTransaction("222", "333", 100000)
 
-	ps.Users["111"].Deposit(100)
-	ps.Users["222"].Deposit(500)
-	ps.Users["333"].Deposit(1000)
+	err := ps.Users["111"].Deposit(-100)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ps.Users["222"].Deposit(500)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ps.Users["333"].Deposit(1000)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	err := ps.Users["111"].WithDraw(100)
+	err = ps.Users["111"].WithDraw(1000000000000)
 	if err != nil {
 		fmt.Println(err)
 	}
