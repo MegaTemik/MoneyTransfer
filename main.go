@@ -13,7 +13,7 @@ type User struct {
 
 func (u *User) Deposit(amount int64) error {
 	if amount <= 1 {
-		return errors.New("the amount must be greater than 0!")
+		return errors.New("the amount of deposit must be greater than 0!")
 	}
 	u.Balance += amount
 	return nil
@@ -24,7 +24,7 @@ func (u *User) WithDraw(amount int64) error {
 		u.Balance -= amount
 		return nil
 	}
-	return errors.New("not enough money on the balance!")
+	return errors.New("not enough money to withdraw from the user ID: " + u.ID)
 }
 
 func main() {
