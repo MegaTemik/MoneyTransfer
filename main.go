@@ -11,8 +11,12 @@ type User struct {
 	Balance int64
 }
 
-func (u *User) Deposit(amount int64) {
+func (u *User) Deposit(amount int64) error {
+	if amount <= 1 {
+		return errors.New("the amount must be greater than 0!")
+	}
 	u.Balance += amount
+	return nil
 }
 
 func (u *User) WithDraw(amount int64) error {
@@ -42,7 +46,7 @@ func main() {
 		Balance: 1500000,
 	}
 
-	u1.Deposit(10_000 * 100)
+	u1.Deposit(-10_000 * 100)
 	u1.WithDraw(60_000 * 100)
 
 	u2.WithDraw(100_000 * 100)
