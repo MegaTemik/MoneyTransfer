@@ -20,7 +20,7 @@ func (u *User) Deposit(amount int64) error {
 }
 
 func (u *User) WithDraw(amount int64) error {
-	if u.Balance >= amount {
+	if u.Balance >= amount && amount > 0 {
 		u.Balance -= amount
 		return nil
 	}
@@ -31,13 +31,13 @@ func main() {
 	u1 := &User{
 		ID:      "111",
 		Name:    "Григорий",
-		Balance: 5000021,
+		Balance: 5000000,
 	}
 
 	u2 := &User{
 		ID:      "222",
 		Name:    "Пётр",
-		Balance: 10101000,
+		Balance: 10000000,
 	}
 
 	u3 := &User{
@@ -46,7 +46,7 @@ func main() {
 		Balance: 1500000,
 	}
 
-	u1.Deposit(-10_000 * 100)
+	u1.Deposit(10_000 * 100)
 	u1.WithDraw(60_000 * 100)
 
 	u2.WithDraw(100_000 * 100)
