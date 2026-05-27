@@ -12,8 +12,12 @@ type User struct {
 	Balance float64
 }
 
-func (u *User) Deposit(amount float64) {
-	u.Balance += amount
+func (u *User) Deposit(amount float64) error {
+	if amount <= 0.01 {
+		return errors.New("the amount of deposit must be greater than 0!")
+	}
+	u.Balance -= amount
+	return nil
 }
 
 func (u *User) WithDraw(amount float64) error {
@@ -21,7 +25,7 @@ func (u *User) WithDraw(amount float64) error {
 		u.Balance -= amount
 		return nil
 	}
-	return errors.New("not enough money on the user ID: " + u.ID)
+	return errors.New("not enough money to withdraw from the user ID: " + u.ID)
 }
 
 type Transaction struct {
@@ -80,17 +84,15 @@ func (ps *PaymentSystem) ProcessingTransactions(tr Transaction) error {
 	return nil
 }
 
-func (ps *PaymentSystem) Worker(ch <-chan Transaction, wg *sync.WaitGroup) error {
+func (ps *PaymentSystem) Worker(ch <-chan Transaction, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for v := range ch {
 		err := ps.ProcessingTransactions(v)
 		if err != nil {
-			return err
+			fmt.Println(err)
 		}
 	}
-	return nil
-
 }
 
 func main() {
@@ -101,15 +103,24 @@ func main() {
 	ps.AddUser("222", "Петр", 100000)
 	ps.AddUser("333", "Василий", 15000)
 
-	ps.AddTransaction("111", "222", 10000)
+	ps.AddTransaction("111", "222", -100000000)
 	ps.AddTransaction("333", "222", 5000)
 	ps.AddTransaction("222", "333", 100000)
 
-	ps.Users["111"].Deposit(100)
-	ps.Users["222"].Deposit(500)
-	ps.Users["333"].Deposit(1000)
+	err := ps.Users["111"].Deposit(100)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ps.Users["222"].Deposit(500)
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = ps.Users["333"].Deposit(1000)
+	if err != nil {
+		fmt.Println(err)
+	}
 
-	err := ps.Users["111"].WithDraw(100)
+	err = ps.Users["111"].WithDraw(100)
 	if err != nil {
 		fmt.Println(err)
 	}
